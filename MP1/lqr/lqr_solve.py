@@ -68,4 +68,9 @@ class PendulumBalance(object):
     
     def get_system(self):
         # TODO: Return A, B, Q, R for this system
-        return None, None, None, None
+        A = np.array([[1, self.dt], [15*self.dt, 1]])
+        B = np.array([[0], [3*self.dt]])
+        #Have the same cost function as the previous case 
+        Q = np.array([[1,0], [0,1]])
+        R = np.array([[1]])
+        return A, B, Q, R
