@@ -53,7 +53,7 @@ def main(_):
                                   num_workers=2, shuffle=True, drop_last=True)
     
     num_classes = dataset_train.num_classes
-    device = torch.device('cuda:0')
+    device = torch.device('mps') #Need to change device, because no cuda on mac, changing to mps
     model = SimpleModel(num_classes=num_classes)
     model.to(device)
 
