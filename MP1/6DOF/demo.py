@@ -53,7 +53,7 @@ def main(_):
                                   num_workers=2, shuffle=True, drop_last=True)
     
     num_classes = dataset_train.num_classes
-    device = torch.device('mps') #Need to change device, because no cuda on mac, changing to mps
+    device = torch.device('mps') #Need to change device, because no cuda on mac, changing
     model = SimpleModel(num_classes=num_classes)
     model.to(device)
 
@@ -93,6 +93,8 @@ def main(_):
         t_gt = t_gt.to(device, non_blocking=True)
 
         logits, R, t = model(image, bbox)
+
+        batch_size = R.shape[0]
         
         # Compute metrics
         cls_pred, R_pred, t_pred = model.process_output((logits, R, t))
@@ -104,8 +106,8 @@ def main(_):
 
         # Loss functions for training
         classification_loss = nn.CrossEntropyLoss()(logits, cls_gt)
-        R_loss = nn.MSELoss()(R, R_gt.reshape(-1, 9))
-        t_loss = nn.MSELoss()(t, t_gt.reshape(-1, 3))
+        R_loss = nn.MSELoss()(R[torch.arange(batch_size), cls_gt], R_gt.reshape(-1, 9))
+        t_loss = nn.MSELoss()(t[torch.arange(batch_size), cls_gt], t_gt.reshape(-1, 3))
 
         classification_loss = classification_loss.mean()
         R_loss = R_loss.mean()

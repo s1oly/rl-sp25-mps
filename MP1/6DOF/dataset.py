@@ -61,7 +61,11 @@ class YCBVDataset(Dataset):
         t = torch.tensor(item['cam_t_m2c'], dtype=torch.float32).reshape(3, 1) / 1000.
         img = self._get_image(idx)
         bbox = torch.tensor(item['bbox_visib'], dtype=torch.float32).reshape(4)
+        bbox_buffer = bbox.numpy()
+        bbox_data = bbox_buffer.copy()
         if self.transform:
+            img = img   .crop((bbox_data[0], bbox_data[1], bbox_data[0] + bbox_data[2], bbox_data[1] + bbox_data[3]))
+            img = img.resize((224, 224))
             img = self.transform(img)
         return img, bbox, obj_class, R, t, item['key_name']
 
