@@ -11,6 +11,7 @@ import time
 from dataset import YCBVDataset
 from network import SimpleModel
 from utils import test, get_metrics, logger, setup_logging
+from utils import matrix_to_6d_rotation
 
 
 FLAGS = flags.FLAGS
@@ -92,12 +93,13 @@ def main(_):
         R_gt = R_gt.to(device, non_blocking=True)
         t_gt = t_gt.to(device, non_blocking=True)
 
-        logits, R, t = model(image, bbox)
+        # logits, R, t = model(image, bbox)
+        logits, rot_6d, t = model(image, bbox)
 
-        batch_size = R.shape[0]
+        batch_size = rot_6d.shape[0]
         
         # Compute metrics
-        cls_pred, R_pred, t_pred = model.process_output((logits, R, t))
+        cls_pred, R_pred, t_pred = model.process_output((logits, rot_6d, t))
         metrics = get_metrics(
             cls=cls_pred, R=R_pred, t=t_pred, 
             gt_cls=cls_gt, gt_R=R_gt, gt_t=t_gt)        
@@ -106,7 +108,7 @@ def main(_):
 
         # Loss functions for training
         classification_loss = nn.CrossEntropyLoss()(logits, cls_gt)
-        R_loss = nn.MSELoss()(R[torch.arange(batch_size), cls_gt], R_gt.reshape(-1, 9))
+        R_loss = nn.MSELoss()(rot_6d[torch.arange(batch_size), cls_gt], matrix_to_6d_rotation(R_gt).reshape(-1, 6))
         t_loss = nn.MSELoss()(t[torch.arange(batch_size), cls_gt], t_gt.reshape(-1, 3))
 
         classification_loss = classification_loss.mean()

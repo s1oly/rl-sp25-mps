@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torchvision import models
 from utils import make_rotation_matrix
+from utils import rotation_6d_to_matrix
 from absl import flags
 FLAGS = flags.FLAGS
 
@@ -12,7 +13,7 @@ class SimpleModel(nn.Module):
         self.resnet = models.resnet18(weights='IMAGENET1K_V1')
         self.resnet.fc = nn.Identity()
         self.num_classes = num_classes
-        num_outputs = self.num_classes + 9 + 3
+        num_outputs = self.num_classes + 6 + 3 # was 9 previously for rot matrix
         self.one = 1
 
         self.head = nn.Sequential(
@@ -32,7 +33,7 @@ class SimpleModel(nn.Module):
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
-            nn.Linear(256,9 + 3) # num_outputs
+            nn.Linear(256,6 + 3) # num_outputs
         ) for i in range(13)])
        
 
@@ -43,17 +44,20 @@ class SimpleModel(nn.Module):
         # logits, R, t = torch.split(x, [self.num_classes, 9*self.one, 3*self.one], dim=1)
         logits = x
         outputs = torch.stack([heads(features) for heads in self.heads_list], dim = 1)
-        R = outputs[:, :, :9]
-        t = outputs[:, :, 9:]
+        # R = outputs[:, :, :9]
+        rot_6d = outputs[:, :, :6]
+        t = outputs[:, :, 6:] # was 9, is now 6
 
-        return logits, R, t
+        return logits, rot_6d, t
 
     def process_output(self, outs):
         with torch.no_grad():
-            logits, R, t = outs 
+            # logits, R, t = outs 
+            logits, rot_6d, t = outs 
             cls = logits.argmax(dim=1)
-            batch_size = R.shape[0]
-            R = make_rotation_matrix(R[torch.arange(batch_size), cls].reshape(-1, 3, 3))
+            batch_size = rot_6d.shape[0]  # was R
+            # R = make_rotation_matrix(R[torch.arange(batch_size), cls].reshape(-1, 3, 3))
+            R = rotation_6d_to_matrix(rot_6d[torch.arange(batch_size), cls].reshape(-1,6))
             t = t[torch.arange(batch_size), cls].reshape(-1, 3, 1)
             return cls, R, t
     

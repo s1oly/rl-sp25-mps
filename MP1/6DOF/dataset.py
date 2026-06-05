@@ -8,6 +8,7 @@ from tqdm import tqdm
 from absl import flags
 import logging
 from io import BytesIO
+from utils import matrix_to_6d_rotation
 
 FLAGS = flags.FLAGS
 
@@ -58,6 +59,7 @@ class YCBVDataset(Dataset):
         item = self.data[idx].copy()
         obj_class = item['obj_id']
         R = torch.tensor(item['cam_R_m2c'], dtype=torch.float32).reshape(3, 3)
+        # rot_6d = matrix_to_6d_rotation(R)
         t = torch.tensor(item['cam_t_m2c'], dtype=torch.float32).reshape(3, 1) / 1000.
         img = self._get_image(idx)
         bbox = torch.tensor(item['bbox_visib'], dtype=torch.float32).reshape(4)
@@ -67,6 +69,6 @@ class YCBVDataset(Dataset):
             img = img   .crop((bbox_data[0], bbox_data[1], bbox_data[0] + bbox_data[2], bbox_data[1] + bbox_data[3]))
             img = img.resize((224, 224))
             img = self.transform(img)
-        return img, bbox, obj_class, R, t, item['key_name']
+        return img, bbox, obj_class, R, t, item['key_name'] # Previously did return R
 
 
