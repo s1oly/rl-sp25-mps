@@ -122,4 +122,3 @@ def matrix_to_6d_rotation(matrix: torch.Tensor) -> torch.Tensor:
 
 
 
-

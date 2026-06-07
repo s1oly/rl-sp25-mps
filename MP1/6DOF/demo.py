@@ -94,9 +94,23 @@ def main(_):
         t_gt = t_gt.to(device, non_blocking=True)
 
         # logits, R, t = model(image, bbox)
-        logits, rot_6d, t = model(image, bbox)
+        batch_size = image.shape[0]
 
-        batch_size = rot_6d.shape[0]
+        r_curr = torch.zeros(batch_size, 6, device = device)
+        t_curr = torch.zeros(batch_size, 3, device = device)
+        rot_6d_gt = matrix_to_6d_rotation(R_gt).reshape(-1, 6)
+        t_gt_flat = t_gt.reshape(-1,3)
+
+        R_loss = 0
+        t_loss_acc = 0
+
+        for T in range(3):  
+            logits, rot_6d, t = model(image, bbox, r_curr, t_curr)
+            R_loss += nn.MSELoss()(rot_6d[torch.arange(batch_size), cls_gt], rot_6d_gt)
+            t_loss_acc += nn.MSELoss()(t[torch.arange(batch_size), cls_gt], t_gt_flat)
+            r_curr =rot_6d[torch.arange(batch_size), cls_gt].detach()
+            t_curr = t[torch.arange(batch_size), cls_gt].detach()
+            
         
         # Compute metrics
         cls_pred, R_pred, t_pred = model.process_output((logits, rot_6d, t))
@@ -106,14 +120,11 @@ def main(_):
         for key, value in metrics.items():
             metrics_np[key].append(value)
 
-        # Loss functions for training
+        # Loss functions for training (modified since loss averaged out on T = 3 trials of IAE)
         classification_loss = nn.CrossEntropyLoss()(logits, cls_gt)
-        R_loss = nn.MSELoss()(rot_6d[torch.arange(batch_size), cls_gt], matrix_to_6d_rotation(R_gt).reshape(-1, 6))
-        t_loss = nn.MSELoss()(t[torch.arange(batch_size), cls_gt], t_gt.reshape(-1, 3))
+        R_loss = R_loss/3
+        t_loss = t_loss_acc/3
 
-        classification_loss = classification_loss.mean()
-        R_loss = R_loss.mean()
-        t_loss = t_loss.mean()
         total_loss = classification_loss + R_loss + t_loss
         
                 

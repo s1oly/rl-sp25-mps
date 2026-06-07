@@ -16,8 +16,11 @@ class SimpleModel(nn.Module):
         num_outputs = self.num_classes + 6 + 3 # was 9 previously for rot matrix
         self.one = 1
 
+    # For adding iterative feedback,
+    # need to add feed back of rotation prediction + translation 
+
         self.head = nn.Sequential(
-            nn.Linear(512 + 4, 256),
+            nn.Linear(512 + 4 + 6 + 3, 256), 
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
@@ -27,7 +30,7 @@ class SimpleModel(nn.Module):
         )
 
         self.heads_list = nn.ModuleList([nn.Sequential(
-            nn.Linear(512 + 4, 256),
+            nn.Linear(512 + 4 + 6 + 3, 256),
             nn.ReLU(),
             nn.Linear(256, 256),
             nn.ReLU(),
@@ -37,9 +40,13 @@ class SimpleModel(nn.Module):
         ) for i in range(13)])
        
 
-    def forward(self, image, bbox):
+    def forward(self, image, bbox, r_current = None, t_current = None):
+        if(r_current is None):
+            r_current = torch.zeros(image.shape[0], 6, device=image.device) # shape needs to include batch size, don't know how
+        if(t_current is None):
+            t_current = torch.zeros(image.shape[0], 3, device=image.device)
         x = self.resnet(image)
-        features = torch.cat((x, bbox), dim=1)
+        features = torch.cat((x, bbox, r_current, t_current), dim=1)
         x = self.head(features)
         # logits, R, t = torch.split(x, [self.num_classes, 9*self.one, 3*self.one], dim=1)
         logits = x

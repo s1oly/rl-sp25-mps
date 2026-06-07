@@ -66,7 +66,7 @@ class YCBVDataset(Dataset):
         bbox_buffer = bbox.numpy()
         bbox_data = bbox_buffer.copy()
         if self.transform:
-            img = img   .crop((bbox_data[0], bbox_data[1], bbox_data[0] + bbox_data[2], bbox_data[1] + bbox_data[3]))
+            img = img.crop((bbox_data[0], bbox_data[1], bbox_data[0] + bbox_data[2], bbox_data[1] + bbox_data[3]))
             img = img.resize((224, 224))
             img = self.transform(img)
         return img, bbox, obj_class, R, t, item['key_name'] # Previously did return R
